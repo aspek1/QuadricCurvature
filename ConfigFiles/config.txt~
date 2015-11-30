@@ -1,0 +1,112 @@
+# Currently not being used
+USE_KINECT=false
+USE_POINT_CLOUD_DATA=false
+TIMING_TEST=false
+OFFLINE_TESTING=true
+#DATASET_DIR=/home/andrew/Datasets/Dataset_GT23
+#DATASET_DIR=/home/andrew/Datasets/rgbd_dataset_freiburg1_desk/associated
+#DATASET_DIR=/home/andrew/Datasets/rgbd_dataset_freiburg1_desk/test
+#DATASET_DIR=/home/andrew/Datasets/rgbd_dataset_freiburg1_desk/test2
+#DATASET_DIR=/home/andrew/Datasets/rgbd_dataset_freiburg3_long_office_household/associated
+#DATASET_DIR=/home/andrew/Datasets/ICL_livingroom_0
+
+DATASET_DIR=/home/andrew/Datasets/ICL_livingroom_0_noise
+
+# KINECT SIZE
+FRAME_WIDTH=640
+FRAME_HEIGHT=480
+
+# DATA SET SIZE
+#FRAME_WIDTH=512
+#FRAME_HEIGHT=424
+
+# RAY TRACE SMALL
+#FRAME_WIDTH=200
+#FRAME_HEIGHT=200
+
+RADIUS=5;
+
+# Camera Params
+
+# ASUS XTION 
+#focal_x=536.84423
+#focal_y=535.47755
+#center_x=319.14307
+#center_y=235.75882
+#r_3=0.03538
+#r_4=-0.11699
+
+# KINECT 1
+#focal_x=578.08
+#focal_y=572.86
+#center_x=318.21
+#center_y=217.00
+#r_3=0.0099
+#r_4=-0.01152
+
+# MY SIMULATION - 1
+#focal_x=500.00
+#focal_y=500.00
+#center_x=320.0
+#center_y=240.0
+#r_3=0.0
+#r_4=0.0
+
+# MY SIMULATION - 2
+#focal_x=560.00
+#focal_y=560.00
+#center_x=320.0
+#center_y=240.0
+#r_3=0.0
+#r_4=0.0
+
+# MY SIMULATION - RAY TRACING
+#focal_x=550.00
+#focal_y=550.00
+#center_x=320.0
+#center_y=240.0
+#r_3=0.0
+#r_4=0.0
+
+# MY SIMULATION - RAY TRACING SMALL
+#focal_x=300.00
+#focal_y=300.00
+#center_x=100.0
+#center_y=100.0
+#r_3=0.0
+#r_4=0.0
+
+# TUM freiburg dataset 1
+#focal_x=517.3
+#focal_y=516.5
+#center_x=318.6
+#center_y=255.3
+#r_3=0.2624
+#r_4=-0.9531
+
+# TUM freiburg dataset 3
+#focal_x=535.4
+#focal_y=539.2
+#center_x=320.1
+#center_y=247.6
+#r_3=0.0
+#r_4=0.0
+
+# ICL synth
+focal_x=481.20
+focal_y=-480.00
+center_x=319.5
+center_y=249.5
+r_3=0.0
+r_4=0.0
+
+#	set_cam_parameters(536.84423f, 535.47755f, 319.14307f, 235.75882f,  0.0f, 0.0f);
+#	set_cam_parameters(578.08f, 572.86f, 318.21f, 217.00f,  9.9e-3f, -1.152e-2f);
+#	set_cam_parameters(433, 433, 320, 240,  0.0f, 0.0f
+
+# dataset for testing
+# options - mess, cans_linear, synthetic_1, synthetic_2
+DATASET=freiburg1_xyz
+
+COMPUTE_CURVATURE=true
+

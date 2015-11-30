@@ -1,0 +1,6 @@
+*.so
+*.o
+Debug/*
+Release/*
+/Debug
+/Release

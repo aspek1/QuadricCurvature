@@ -1,0 +1,38 @@
+# Currently not being used
+
+# Should store the directory of the dataset being used
+DATASET_DIR=/home/andrew/Dataset_DIR/Dataset_NAME
+
+# Frame Sizes
+FRAME_WIDTH=640
+FRAME_HEIGHT=480
+
+# Curvature Iterations
+MAX_ITS=4
+
+# Half patch radius
+RADIUS=8
+
+# Output options
+PRINT_NORMALS=true
+PRINT_CURVATURE=true
+PRINT_CURVATURE=true
+
+# Camera Params
+
+# ASUS XTION 
+focal_x=536.84423
+focal_y=535.47755
+center_x=319.14307
+center_y=235.75882
+r_3=0.03538
+r_4=-0.11699
+
+
+# Synthetic Dataset
+#focal_x=560.00
+#focal_y=560.00
+#center_x=320.0
+#center_y=240.0
+#r_3=0.0
+#r_4=0.0
