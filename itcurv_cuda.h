@@ -11,7 +11,7 @@
 
 #include "cuda_ext_vecs.h"
 #include "cuda_operators.h"
-#include "GLCudaInterop.hpp"
+//#include "GLCudaInterop.hpp"
 #include "cholesky.h"
 #include "curvQE.h"
 
@@ -291,10 +291,14 @@ __global__ void compute_iterative_curvature(const float4* coords,
 
 	wls_lvm.compute_curvature(coords, J);
 
-	SE3 * se3 = wls_lvm.get_norm_update();
-	float3 new_norm = normalize(se3->rotate(normals[idx]));
+	float3 new_norm = make_float3(wls_lvm.get_QE()->get_rot_mat()._row2);// normalize(se3->rotate(normals[idx]));
 	if(!isnan(new_norm.x) && !isnan(new_norm.y) && !isnan(new_norm.z))
-		normals[idx] = normalize(se3->rotate(normals[idx]));
+		normals[idx] = new_norm; //normalize(se3->rotate(normals[idx]));
+//
+//	SE3 * se3 = wls_lvm.get_norm_update();
+//	float3 new_norm = normalize(se3->rotate(normals[idx]));
+//	if(!isnan(new_norm.x) && !isnan(new_norm.y) && !isnan(new_norm.z))
+//		normals[idx] = normalize(se3->rotate(normals[idx]));
 
 	curvQE* QE = wls_lvm.get_QE();
 	float2 ks = QE->get_principal_curvatures();

@@ -9,15 +9,17 @@
 #define GLCUDAINTEROP_HPP_
 
 
+
 #include <GL/glew.h>
-#include <GL/freeglut.h>
 //#include <GL/glx.h>
 #include <GL/glu.h>
+#include <GL/freeglut.h>
 
 #include <string>
 #include <vector>
 #include <iostream>
 
+#include <cstring>
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 #include <cuda.h>
@@ -28,10 +30,13 @@ typedef unsigned char uchar;
 typedef unsigned short ushort;
 
 class KeyFrame;
+class GLKeyFrame;
 
 extern void convert_depth_to_xyz(ushort* d_depth, float4* d_coords, int width, int height);
 
 extern void compute_normals(KeyFrame * kf);
+
+extern void compute_normals(GLKeyFrame * kf);
 
 extern void perform_bilateral_filter(const ushort* d_input, ushort* d_output, int r, float sigmaR, int width, int height);
 
@@ -299,9 +304,7 @@ public:
 
 };
 
-
-
-class KeyFrame {
+class GLKeyFrame {
 
 	typedef unsigned short ushort;
 	typedef cuda_array<ushort> ushort_ca;
@@ -507,14 +510,13 @@ public:
 		return _smooth_normals;
 	}
 
-	KeyFrame(const int width, const int height) :
+	GLKeyFrame(const int width, const int height) :
 		_width(width),
 		_height(height),
 		_filter_depth(false),
 		_smooth_normals(true)
 	{
 		glGenVertexArrays(1, &_vao);
-
 		bind_vao();
 
 		this->_color = new gl_cuda_vbo<uchar3>(width, height, 1, "color"); // possibly make into pyramid
@@ -527,6 +529,144 @@ public:
 		this->_filtered_depth_array = new ushort_ca(ushort_ca::HostDevice, width, height); // used by bilateral filter
 
 		unbind_vao();
+	}
+
+	/// Don't forget to define properly later
+	virtual ~GLKeyFrame()
+	{
+
+		std::cout << "Destroying Keyframe" << std::endl;
+		_depth_array->~cuda_array();
+		_filtered_depth_array->~cuda_array();
+		return;
+	}
+};
+
+#include <memory>
+
+class KeyFrame {
+
+	typedef unsigned short ushort;
+	typedef cuda_array<ushort> ushort_ca;
+
+private:
+
+	GLuint _vao;
+
+	std::unique_ptr<ushort_ca > _depth_array;
+	std::unique_ptr<ushort_ca > _filtered_depth_array;
+
+	std::unique_ptr<cuda_array<uchar3> > _color;
+	std::unique_ptr<cuda_array<float3> > _normals;
+	std::unique_ptr<cuda_array<float4> > _coords;
+
+	int _width;
+	int _height;
+
+	bool _filter_depth;
+	bool _smooth_normals;
+
+	void cudaCheck(int errCode, const char* str = "")
+	{
+		if(errCode != CUDA_SUCCESS)
+		{
+			std::cerr << str <<  " >> CUDA ERROR: " << cudaGetErrorString((cudaError_t)errCode) << " - exiting" << std::endl;
+			exit(errCode);
+		}
+	}
+
+public:
+
+	int get_size()
+	{
+		return _width*_height;
+	}
+
+	//TODO - fix vao stuff
+
+
+	inline int get_height() { return this->_height; }
+	inline int get_width() { return this->_width; }
+
+	// Get Mapped Stuff
+	uchar3* get_mapped_color() {
+		return _color.get()->get_device_array();
+	}
+
+	float3* get_mapped_normals() {
+		return _normals.get()->get_device_array();
+	}
+
+	float4* get_mapped_coords() {
+		return _coords.get()->get_device_array();
+	}
+
+	void copy_data_to_coords(float* coord_data)
+	{
+		cudaCheck(cudaMemcpy(get_mapped_coords(), coord_data, this->_width*this->_height*sizeof(float4), cudaMemcpyHostToDevice));
+	}
+
+	void copy_depth_to_coords(ushort* depth_data)
+	{
+
+		cudaMemcpy(_depth_array->get_device_array(), depth_data, this->_width*this->_height*sizeof(ushort), cudaMemcpyHostToDevice);
+
+		//		_depth_array->copy_data(depth_data, true);
+		convert_depth_to_xyz(_depth_array->get_device_array(), get_mapped_coords(), this->_width, this->_height);
+	}
+
+	void copy_color_to_device(uchar* color_data)
+	{
+		uchar3* mapped_color = get_mapped_color();
+		cudaCheck(cudaMemcpy(get_mapped_color(), color_data, this->_width*this->_height*sizeof(uchar3), cudaMemcpyHostToDevice));
+	}
+
+	void initialise_from_point_cloud(float* coords_data, uchar* color_data)
+	{
+		this->copy_color_to_device(color_data);
+		this->copy_data_to_coords(coords_data);
+		compute_normals(this);
+	}
+
+	void initialise_from_depth(ushort* depth_data, uchar* color_data, float filter_r, float sigma_r)
+	{
+
+		this->copy_color_to_device(color_data);
+
+		// filter depth?
+		if(_filter_depth) {
+			_depth_array->copy_data(depth_data, false);
+			perform_bilateral_filter(_depth_array->get_device_array(), _filtered_depth_array->get_device_array(), filter_r, sigma_r, _width, _height);
+			convert_depth_to_xyz(_filtered_depth_array->get_device_array(), get_mapped_coords(), this->_width, this->_height);
+		}
+		else
+			this->copy_depth_to_coords(depth_data);
+
+		// compute gradients here?
+
+		// compute normals
+		compute_normals(this);
+	}
+
+
+
+	bool& smooth_normals()
+	{
+		return _smooth_normals;
+	}
+
+	KeyFrame(const int width, const int height) :
+		_width(width),
+		_height(height),
+		_filter_depth(false),
+		_smooth_normals(true),
+		_color(new cuda_array<uchar3> (cuda_array<uchar3>::Device, width, height)),
+		_normals(new cuda_array<float3> (cuda_array<float3>::Device, width, height)),
+		_coords(new cuda_array<float4> (cuda_array<float4>::Device, width, height)),
+		_depth_array(new ushort_ca(ushort_ca::HostDevice, width, height)),
+		_filtered_depth_array(new ushort_ca(ushort_ca::HostDevice, width, height))
+	{
+
 	}
 
 	/// Don't forget to define properly later

@@ -15,7 +15,7 @@
 #include <math.h>
 #include "cuda_device_functions.h"
 
-#include "GLCudaInterop.hpp"
+//#include "GLCudaInterop.hpp"
 
 const float one_6th = 1.0f/6.0f;
 const float one_20th = 1.0f/20.0f;
@@ -440,13 +440,15 @@ public:
 			float* J)
 	{
 
+
+
 		for(int i=0; i<_max_iterations; ++i)
 		{
 			_wls.init();
 			_total_err = 0;
 			_num_points_used_in_patch = 0;
 
-			_stats = get_error_stats(coords, &_QE);
+//			_stats = get_error_stats(coords, &_QE);
 
 			int points_used = 0;
 
@@ -559,7 +561,7 @@ __host__ void update_index_offsets(int radius,
 			if((i*i+j*j) < (radius*radius+5)) {
 				float x_diff = i;
 				float y_diff = j;
-				index_offsets_host[index++] = (i*width + j)*2;
+				index_offsets_host[index++] = (i*width + j)*3;
 				cout << "1 ";
 			}
 			else

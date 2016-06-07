@@ -7,10 +7,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <GL/glew.h>
-#include <GL/freeglut.h>
-#include <GL/glx.h>
-#include <GL/glu.h>
+//#include <GL/glew.h>
+//#include <GL/freeglut.h>
+//#include <GL/glx.h>
+//#include <GL/glu.h>
+
+#include "GLCudaInterop.hpp"
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
@@ -28,7 +30,6 @@
 #include "itcurv_cuda.h"
 
 //#include "my_cuda_helpers.h"
-#include "GLCudaInterop.hpp"
 #include "cuda_device_functions.h"
 
 // CUDA helper functions
@@ -395,6 +396,19 @@ void compute_normals(KeyFrame * kf)
 		compute_normal_field<<<grid, block>>> (kf->get_mapped_coords(), kf->get_mapped_normals(), kf->get_width(), kf->get_height());
 }
 
+void compute_normals(GLKeyFrame * kf)
+{
+	dim3 block(16, 16, 1);
+	dim3 grid(kf->get_width()/block.x + 1, kf->get_height()/block.y + 1, 1);
+	// shared ?
+	if(kf->smooth_normals()) {
+//		compute_normal_field_w_smoothing<<<grid, block>>> (kf->get_mapped_coords(), kf->get_mapped_normals(), kf->get_width(), kf->get_height());
+		compute_normals_from_covariance_inv_depth<<<grid, block>>> (kf->get_mapped_coords(), kf->get_mapped_normals(), 3,  kf->get_width(), kf->get_height());
+	}
+	else
+		compute_normal_field<<<grid, block>>> (kf->get_mapped_coords(), kf->get_mapped_normals(), kf->get_width(), kf->get_height());
+}
+
 void compute_normals(float4* coords, float3* norms, const int width, const int height, bool smooth_normals=true)
 {
 	dim3 block(16, 16, 1);
@@ -406,6 +420,57 @@ void compute_normals(float4* coords, float3* norms, const int width, const int h
 	}
 	else
 		compute_normal_field<<<grid, block>>> (coords, norms, width, height);
+}
+
+
+/// Bilaterally Filter depth
+
+__global__ void bilateral_filter(const ushort* d_input, ushort* d_output, int r, float sigmaR, int width, int height)
+{
+	const int x = blockIdx.x*blockDim.x + threadIdx.x;
+	const int y = blockIdx.y*blockDim.y + threadIdx.y;
+
+    if (x >= width || y >= height) {
+        return;
+    }
+
+    const int idx = toIndex(x,y,width);
+
+    //d_output[idx] = d_input[idx];
+    //return;
+
+    float sum = 0.0f;
+    float factor;
+    float t = 0.0f;
+    float center = d_input[idx];
+
+    for (int i = -r; i <= r; i++)
+    {
+        for (int j = -r; j <= r; j++)
+        {
+            float curPix = (float)d_input[toIndex(x + j, y + i, width)];
+            factor = cGaussian[i + r] * cGaussian[j + r] *     //domain factor
+                     euclideanLen(curPix, center, sigmaR);             //range factor
+
+            t += factor * curPix;
+            sum += factor;
+        }
+    }
+
+    d_output[idx] = (unsigned short)(t/sum);
+}
+
+void perform_bilateral_filter(const ushort* d_input,
+		ushort* d_output,
+		int r,
+		float sigmaR,
+		int width,
+		int height)
+{
+	dim3 block(16,16,1);
+	dim3 grid(width/block.x+1, height/block.y+1, 1);
+
+	bilateral_filter<<<grid, block>>> (d_input, d_output, r, sigmaR, width, height);
 }
 
 #endif

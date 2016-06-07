@@ -15,6 +15,8 @@
 
 /// Local Includes
 
+#include "CurvSolver.h"
+
 #include "Cam.h"
 #include "FileCamera.h"
 
@@ -46,6 +48,7 @@
 #include "configuration.h"
 
 #include "my_cuda_helpers.h"
+
 
 /// globals
 
@@ -83,6 +86,20 @@ std::string get_filename(std::string datasetDir, std::string prefix, int frame_n
 	return std::string(buffer, l);
 }
 
+#include <memory>
+
+void initGLEW()
+{
+	glewExperimental = GL_TRUE;
+
+	GLenum err = glewInit();
+
+	if(err != GLEW_OK) {
+		std::cerr << "Error Initialising GLEW exiting" << std::endl;
+	}
+	int errCode = glGetError();
+}
+
 int main()
 {
 	using namespace CVD;
@@ -92,12 +109,15 @@ int main()
 	configuration config;
 	config.init_from_file();
 
-	FileCamera* listener = new FileCamera(config["DATASET_DIR"]);
+	initGLEW();
 
-	/// TIMING TEST
+	FileCamera* listener = new FileCamera(config["DATASET_DIR"]);
 
 	int frame_width = config.get_int("FRAME_WIDTH");
 	int frame_height = config.get_int("FRAME_HEIGHT");
+
+	int radius = config.get_int("RADIUS");
+	int max_its = config.get_int("MAX_ITS");
 
 	float focal_x = config.get_float("focal_x");
 	float focal_y = config.get_float("focal_y");
@@ -106,97 +126,48 @@ int main()
 	float r_3 = config.get_float("r_3");
 	float r_4 = config.get_float("r_4");
 
-	int radius = config.get_int("RADIUS");
 
+	CURVATURE::CurvSolver* solver = new CURVATURE::CurvSolver(frame_width, frame_height, radius, max_its);
 
-	/// Init Device Arrays
-	unsigned short* d_depth = (unsigned short*)cudaArray<unsigned short>(frame_width*frame_height, sizeof(unsigned short), true);
-	float4* d_error = (float4*)cudaArray<float4>(frame_width*frame_height, sizeof(float4), true);
-	float3* d_curv = (float3*)cudaArray<float3>(frame_width*frame_height, sizeof(float3), true);
-	float4* d_coords = (float4*)cudaArray<float4>(frame_width*frame_height, sizeof(float4), true);
-	float3* d_norms = (float3*)cudaArray<float3>(frame_width*frame_height, sizeof(float3), true);
-	uchar3* d_color = (uchar3*)cudaArray<uchar3>(frame_width*frame_height, sizeof(uchar3), true);
-
-	unsigned short* d_depth_filtered = (unsigned short*)cudaArray<unsigned short>(frame_width*frame_height, sizeof(unsigned short), true);
-
-	float3* d_color_gradients = (float3*)cudaArray<float3>(frame_width*frame_height, sizeof(float3), true);
-	float3* d_depth_gradients = (float3*)cudaArray<float3>(frame_width*frame_height, sizeof(float3), true);
-
-	float* d_border = (float*)cudaArray<float>(frame_width*frame_height, sizeof(float), true);
-
-	/// Create Image
-	CVD::Image<Rgb<CVD::byte> > color = CVD::Image<Rgb<CVD::byte> > (CVD::ImageRef(frame_width, frame_height));
-	CVD::Image<unsigned short > depth = CVD::Image<unsigned short > (CVD::ImageRef(frame_width, frame_height));
-
-	std::cout << "Computing Curvature From Directory: " << std::endl;
-	std::cout << config["DATASET_DIR"] << std::endl << std::endl;
-
-
-	updateCameraModel(focal_x, focal_y, center_x, center_y,  r_3, r_4);
-	update_index_offsets(radius, frame_width);
-
-	/// Start on frame 0
-	listener->frame_idx=0;
-
-
-	float4* h_coords2 = new float4[frame_width*frame_height];
-
-	float_ptr h_curv(frame_width*frame_height*3);
-	float_ptr h_norms(frame_width*frame_height*3);
-	float_ptr h_quad(frame_width*frame_height*13);
-	float_ptr h_coords(frame_width*frame_height*4);
+	solver->update_cam_model(focal_x, focal_y, center_x, center_y, r_3, r_4);
 
 	while(1) {
-
-		int max_its = config.get_int("MAX_ITS");
+		CVD::Image<Rgb<CVD::byte> > color = CVD::Image<Rgb<CVD::byte> > (CVD::ImageRef(frame_width, frame_height));
+		CVD::Image<unsigned short > depth = CVD::Image<unsigned short > (CVD::ImageRef(frame_width, frame_height));
 
 		if(!listener->get_frame(color, depth)) {
 			break;
 		}
 
-		/// Convert Input Depth to Point-cloud
-		cudaMemcpy(d_depth, depth.data(), frame_width*frame_height*sizeof(unsigned short), cudaMemcpyHostToDevice);
-		convert_depth_to_xyz(d_depth, d_coords, frame_width, frame_height);
+		solver->copy_rgbd((uint16_t*)depth.data(), (uint8_t*)color.data());
 
-		/// compute normals
-		compute_normals(d_coords, d_norms, frame_width, frame_height, false);
-		cudaMemset(d_curv, 0, sizeof(float3)*frame_width*frame_height);
+		std::unique_ptr<float> h_curvature(new float[frame_height*frame_width*3]);
+		std::unique_ptr<float> h_normals(new float[frame_height*frame_width*3]);
+		std::unique_ptr<float> h_coords(new float[frame_height*frame_width*4]);
 
-		/// Compute Curvature
-		compute_iterative_curvature_host(d_coords,
-				d_norms,
-				d_curv,
-				frame_width,
-				frame_height,
-				radius,
-				max_its,
-				d_error);
+		solver->compute();
+
+		solver->get_curvature(h_curvature.get());
+		solver->get_normals(h_normals.get());
+		solver->get_coords(h_coords.get());
 
 
-		///// PRINT OUT NORMALS
 
 		if(config.get_bool("PRINT_NORMALS")) {
 
-			cudaCheck(cudaMemcpy(h_norms.get_pointer(), d_norms, sizeof(float3)*frame_width*frame_height, cudaMemcpyDeviceToHost));
-
-			write_ascii(h_norms, get_filename(config["DATASET_DIR"], "normals", listener->frame_idx, "dat"), frame_width, frame_height, 3);
+			write_ascii(h_normals.get(), get_filename(config["DATASET_DIR"], "normals", listener->frame_idx, "dat"), frame_width, frame_height, 3);
 		}
 
 		///// PRINT OUT CURVATURE
 
 		if(config.get_bool("PRINT_CURVATURE")) {
-
-			cudaMemcpy(h_curv.get_pointer(), d_curv, frame_width*frame_height*sizeof(float3), cudaMemcpyDeviceToHost);
-
-			write_ascii(h_curv, get_filename(config["DATASET_DIR"], "curvature", listener->frame_idx, "dat"), frame_width, frame_height, 3);
+			write_ascii(h_curvature.get(), get_filename(config["DATASET_DIR"], "curvature", listener->frame_idx, "dat"), frame_width, frame_height, 3);
 		}
 
 		///// PRINT OUT COORDINATES
 
-		if(config.get_bool("PRINT_CURVATURE")) {
-			cudaMemcpy(h_coords.get_pointer(), d_coords, frame_width*frame_height*sizeof(float4), cudaMemcpyDeviceToHost);
-
-			write_ascii(h_coords, get_filename(config["DATASET_DIR"], "coords", listener->frame_idx, "dat"), frame_width, frame_height, 4);
+		if(config.get_bool("PRINT_COORDS")) {
+			write_ascii(h_coords.get(), get_filename(config["DATASET_DIR"], "coords", listener->frame_idx, "dat"), frame_width, frame_height, 4);
 		}
 
 
@@ -204,8 +175,8 @@ int main()
 		std::cout << "Finished Frame: " << listener->frame_idx << std::endl;
 
 		listener->frame_idx++;
+
 	}
-	
 
 	std::cout << "Processed " << listener->frame_idx-1  << " frames " << std::endl;
 

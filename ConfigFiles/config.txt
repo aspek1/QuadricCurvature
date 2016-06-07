@@ -1,22 +1,22 @@
 # Currently not being used
 
 # Should store the directory of the dataset being used
-DATASET_DIR=/home/andrew/Dataset_DIR/Dataset_NAME
+DATASET_DIR=/home/andrew/Datasets/Dataset_GT40
 
 # Frame Sizes
 FRAME_WIDTH=640
 FRAME_HEIGHT=480
 
 # Curvature Iterations
-MAX_ITS=4
+MAX_ITS=3
 
 # Half patch radius
-RADIUS=8
+RADIUS=6
 
 # Output options
 PRINT_NORMALS=true
 PRINT_CURVATURE=true
-PRINT_CURVATURE=true
+PRINT_COORDS=true
 
 # Camera Params
 
