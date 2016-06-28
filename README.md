@@ -36,7 +36,7 @@ OpenGL - https://www.opengl.org/
 
 GLEW - http://glew.sourceforge.net/
 
-*NOTE: if these are not included you will need to remove the GLKeyframe class in GLCudaInterop.hpp, and any function that uses GLKeyFrame objects.
+*NOTE: if these are not included you will need to remove the GLKeyframe and gl_cuda_vbo classes in GLCudaInterop.hpp, and any function that uses GLKeyFrame objects.
 
 
 ###Windows (untested)
