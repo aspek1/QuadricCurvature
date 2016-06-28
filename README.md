@@ -20,7 +20,7 @@ year = {2015}
 
 Please post any issues, and they will be fixed asap (if at all possible)
 
-##Using this Code
+##Compiling/Building this Code
 
 ###REQUIRED:
 
@@ -30,14 +30,27 @@ TooN (latest) - http://www.edwardrosten.com/cvd/toon.html
 
 libCVD (latest) - http://www.edwardrosten.com/cvd/
 
+###OPTIONAL:
+
+OpenGL - https://www.opengl.org/
+
+GLEW - http://glew.sourceforge.net/
+
+*NOTE: if these are not included you will need to remove the GLKeyframe class in GLCudaInterop.hpp, and any function that uses GLKeyFrame objects.
+
+
 ###Windows (untested)
 
 Simplest is to use Visual Studio and include all relevant libraries and include directories.
 
 ###Linux 
 
-The simplest way by far is to import the project into the NSight eclipse IDE. The repository includes the relevant project files and will generate make files in order to build project. Alternatively build it manually.
+The simplest way by far is to import the project into the NSight eclipse IDE. The repository includes the relevant project files and will generate make files in order to build project. Alternatively build it manually, ensure to inlude c++11 flag  (-std=c++11) for build.
 
 ###OSX (untested)
 
  - TBA
+
+##Using the Code
+
+The provided example provides a simple base for computing curvature given input frames. We provide a file reading class that will read a sorted list of depth and color images from a dataset directory in the format provided in the sample dataset. It then generates a curvature image, and saves it to a file in row-major ascii format in the root directory. It will also optionally save the computed normals and coords (in meters).
