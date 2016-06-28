@@ -24,7 +24,7 @@ Please post any issues, and they will be fixed asap (if at all possible)
 
 ###REQUIRED:
 
-latest CUDA Toolkit - https://developer.nvidia.com/cuda-toolkit
+CUDA Toolkit (latest) - https://developer.nvidia.com/cuda-toolkit
 
 TooN (latest) - http://www.edwardrosten.com/cvd/toon.html
 
