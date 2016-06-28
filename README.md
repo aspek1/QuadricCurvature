@@ -19,3 +19,14 @@ year = {2015}
 }
 
 Please post any issues, and they will be fixed asap (if at all possible)
+
+##Using this Code
+
+REQUIRED LIBRARIES
+
+TooN - http://www.edwardrosten.com/cvd/toon.html
+libCVD - http://www.edwardrosten.com/cvd/
+
+###Linux
+
+The simplest way by far is to import the project into the NSight eclipse IDE. The repository includes the relevant project files and will generate make files in order to build project. 
