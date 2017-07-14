@@ -5,11 +5,13 @@ Repository created for work performed for paper: A Fast Method For Computing Pri
 Open Source License: feel free to use all or part of this repo in any project in any way but please 
 reference the following publication in any future work that uses it
 
-Dataset(s) Available From: 
-https://www.dropbox.com/sh/c49rqfwnhgqcyv5/AAAZrxCpcuol4GzdSPgOtpa6a?dl=0
+Dataset(s) available from [Dropbox](https://www.dropbox.com/sh/c49rqfwnhgqcyv5/AAAZrxCpcuol4GzdSPgOtpa6a?dl=0)
 
-Paper: http://arrow.monash.edu.au/hdl/1959.1/1254327
+Paper Links: 
+[University Link](http://arrow.monash.edu.au/hdl/1959.1/1254327)
+[arXiv](https://arxiv.org/pdf/1707.00381.pdf)
 
+```
 Cite: 
 @inproceedings{Spek2012,
 author = {Spek, Andrew and Drummond, Tom},
@@ -17,6 +19,7 @@ booktitle = {Australasian Conf. on Robitics and Automation (ACRA)},
 title = {A Fast Method For Computing Principal Curvatures From Range Images},
 year = {2015}
 }
+```
 
 Please post any issues, and they will be fixed asap (if at all possible)
 
